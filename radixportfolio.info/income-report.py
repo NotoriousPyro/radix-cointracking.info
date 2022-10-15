@@ -1,6 +1,10 @@
 import csv
 from itertools import groupby
 from operator import itemgetter
+from os.path import dirname, abspath
+
+IN = f"{dirname(abspath(__file__))}/in.csv"
+OUT = f"{dirname(abspath(__file__))}/out.csv"
 
 # RadixPortfolio.info Income Report -> CoinTracking.info Custom Exchange importer CSV transformer
 # Transforms the exported CSV:
@@ -8,18 +12,18 @@ from operator import itemgetter
 # * Removes rows with 0 epoch lengths (no staking)
 # * Removes rows with 0 rewards
 # * Combines the values of duplicate rows for the same days
-with open('in.csv', newline='', encoding='UTF-8-sig') as csvfile:
+with open(IN, newline='', encoding='UTF-8-sig') as csvfile:
     rewardDate = itemgetter('rewardDate')
     rewardDate_validator = itemgetter('rewardDate', 'validator')
     reader = csv.DictReader(csvfile, delimiter=',', doublequote=True)
     # Remove rows with 0 reward, 0 epoch length, and dates starting with 'up'
-    rows = sorted([
+    rows = [
         row for row
         in reader
         if not row.get('rewardDate', {}).startswith('Up')
         and not row.get('dailyRewards', {}) == '0'
         and not row.get('epochsInDay', {}) == '0'
-    ], key=rewardDate)
+    ]
     # We only want a subset of fields
     out_field_names = [
         field for field
@@ -64,7 +68,7 @@ with open('in.csv', newline='', encoding='UTF-8-sig') as csvfile:
     for row in nonduplicates:
         row['rewardCurrency'] = 'EXRD'
     # Write the CSV
-    with open('out.csv', mode='w', encoding='UTF-8-sig', newline='') as csvout:
+    with open(OUT, mode='w', encoding='UTF-8-sig', newline='') as csvout:
         writer = csv.DictWriter(csvout, fieldnames=out_field_names, extrasaction='ignore')
         writer.writeheader()
         writer.writerows(sorted(
