@@ -67,6 +67,7 @@ with open(IN, newline='', encoding='UTF-8-sig') as csvfile:
     # Add currency
     for row in nonduplicates:
         row['rewardCurrency'] = 'EXRD'
+        row['rewardDate'] = f"{row['rewardDate']} 23:59:59"
     # Write the CSV
     with open(OUT, mode='w', encoding='UTF-8-sig', newline='') as csvout:
         writer = csv.DictWriter(csvout, fieldnames=out_field_names, extrasaction='ignore')
