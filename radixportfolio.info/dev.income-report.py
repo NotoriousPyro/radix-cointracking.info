@@ -7,9 +7,10 @@ from typing import Any, Generator
 IN = f"{dirname(abspath(__file__))}/radix-rewards-raw.csv"
 OUT = f"{dirname(abspath(__file__))}/dev.out.csv"
 CURRENCIES = ['gbp']
+TOKEN_IDENTIFIERS = {
+    'xrd_rr1qy5wfsfh': 'EXRD'
+}
 
-def fix_pow(number: Any):
-    return float(number) / pow(10, 18)
 
 # dev.RadixPortfolio.info Income Report -> CoinTracking.info Custom Exchange importer CSV transformer
 with open(IN, newline='', encoding='UTF-8-sig') as csvfile:
@@ -23,9 +24,7 @@ with open(IN, newline='', encoding='UTF-8-sig') as csvfile:
             'rewardDate',
             'validator',
             'tokenIdentifier',
-            'epoch',
-            'time',
-            'amount',
+            'reward',
             *CURRENCIES
         ]
     ]
@@ -43,17 +42,20 @@ with open(IN, newline='', encoding='UTF-8-sig') as csvfile:
         for duplicate in duplicate_groups():
             start = itemgetter(0)(duplicate)
             start['rewardDate'] = f"{start['rewardDate']} 23:59:59"
-            start['amount'] = fix_pow(start['amount'])
+            start['reward'] = str(float(start['reward']))
             if len(duplicate) < 2:
                 yield start
             last = itemgetter(len(duplicate)-1)(duplicate)
-            start['epoch'] = f"{start['epoch']}-{last['epoch']}" 
+            start['epochRange'] = f"{start['epoch']}-{last['epoch']}"
+            start['tokenIdentifier'] = TOKEN_IDENTIFIERS.get(start['tokenIdentifier'], start['tokenIdentifier'])
             for index in list(range(1, len(duplicate))):
                 other = itemgetter(index)(duplicate)
-                start['amount'] = str(float(start['amount']) + fix_pow(other['amount']))
+                if int(other['epoch']) not in range(int(start['epoch']), int(last['epoch'])+1):
+                    raise Exception("Discontiguous epochs")
+                start['reward'] = str(float(start['reward']) + float(other['reward']))
             yield start
     # Write the CSV
     with open(OUT, mode='w', encoding='UTF-8-sig', newline='') as csvout:
         writer = csv.DictWriter(csvout, fieldnames=out_field_names, extrasaction='ignore')
         writer.writeheader()
-        writer.writerows(sorted(fixed_rows(), key=rewardDate))
+        writer.writerows(fixed_rows())
